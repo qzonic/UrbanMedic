@@ -38,15 +38,15 @@ docker-compose up -d
 
 *После сборки контейнеров, нужно прописать следующие команды по очереди:*
 ```
-docker-compose exec web python manage.py migrate
+docker-compose exec web python3 manage.py migrate
 ```
 
 ```
-docker-compose exec web python manage.py createsuperuser
+docker-compose exec web python3 manage.py createsuperuser
 ```
 
 ```
-docker-compose exec web python manage.py collectstatic --no-input
+docker-compose exec web python3 manage.py collectstatic --no-input
 ```
 
 *Теперь проект доступен по адресу:*
