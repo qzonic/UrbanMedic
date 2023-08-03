@@ -1,0 +1,1067 @@
+openapi: 3.0.2
+info:
+  title: 'VK Test API'
+  version: 'v1'
+  description: |
+    Запросы к API начинаются с `/api/v1/`
+    # Описание
+    Проект **Medics** позволяет создввать сущности пациентов, докторов и физических упражнений.
+    Доктора могут назначать пациентам упражнения, но только те, которые относятся к этому доктору.
+    Пациент может просматривать назначенные ему упражнения, а доктор может просматривать назначенные им упражнения.
+    Так же пациента может отфильтровать назначенные ему упражнения с расчетом даты упражнения через его переодичность.
+
+tags:
+  - name: PATIENT
+    description: Взаимодейсвие с сущностью пациента.
+  - name: DOCTOR
+    description: Взаимодейсвие с сущностью доктора.
+  - name: EXERCISE
+    description: Взаимодействие с сущностью упражнения.
+paths:
+  /api/v1/patients/:
+    get:
+      operationId: Список пациентов
+      description: Просмотреть список всех пациентов.
+      parameters:
+        - name: page
+          required: false
+          in: query
+          description: Номер страницы.
+          schema:
+            type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    example: 123
+                    description: 'Общее количество объектов в базе'
+                  next:
+                    type: string
+                    nullable: true
+                    format: uri
+                    example: http://127.0.0.1/api/v1/patients/?page=4
+                    description: 'Ссылка на следующую страницу'
+                  previous:
+                    type: string
+                    nullable: true
+                    format: uri
+                    example: http://127.0.0.1/api/v1/patients/?page=2
+                    description: 'Ссылка на предыдущую страницу'
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Patient'
+                    description: 'Список объектов текущей страницы'
+          description: Возвращает список пациентов
+      tags:
+      - PATIENT
+    post:
+      operationId: Создать пациента
+      description: Создать пациента с переданными данными.
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatientCreate'
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Patient'
+          description: Пациент создан
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+          description: 'Отсутствует обязательное поле или оно некорректно'
+      tags:
+      - PATIENT
+  /api/v1/patients/<int:id>/:
+    get:
+      operationId: Конкретный пациент
+      description: Просмотреть сущность пациента
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Уникальный идентификатор этого пациента.
+          schema:
+            type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Patient'
+          description: Пациент найден
+        '404':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                    example: Not found.
+          description: Пациент с таким `id` не найден.
+      tags:
+      - PATIENT
+    delete:
+      operationId: Удаление пациента
+      description: Удалить пациента по его id
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Уникальный идентификатор этого пациента.
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Пациент успешно удален
+        '404':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                    example: Not found.
+          description: Пациент с таким `id` не найден.
+      tags:
+        - PATIENT
+    patch:
+      operationId: Частичное обновление пациента
+      description: Частично обновить данные пациента
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Уникальный идентификатор этого пациента.
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatientCreate'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Patient'
+          description: Пациент успешно обновлен.
+        '404':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                    example: Not found.
+          description: Пациент с таким `id` не найден.
+      tags:
+        - PATIENT
+    put:
+      operationId: Полное обновление пациента
+      description: Полностью обновить данные пациента
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Уникальный идентификатор этого пациента.
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatientCreate'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Patient'
+          description: Пациент успешно обновлен.
+        '404':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                    example: Not found.
+          description: Пациент с таким `id` не найден.
+      tags:
+        - PATIENT
+  /api/v1/patients/<int:id>/exercises/:
+    get:
+      operationId: Упражнения для пользователя
+      description: Просмотреть упражнения для конкретного пользователя
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Уникальный идентификатор этого пациента.
+          schema:
+            type: integer
+        - name: page
+          required: false
+          in: query
+          description: Номер страницы.
+          schema:
+            type: integer
+        - name: date
+          required: false
+          in: query
+          description: Фильтрация упражнений.
+          schema:
+            type: string
+            example: 2023-08-3
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    example: 123
+                    description: 'Общее количество объектов в базе'
+                  next:
+                    type: string
+                    nullable: true
+                    format: uri
+                    example: http://127.0.0.1/api/v1/patients/<int:id>/exercises/?page=4
+                    description: 'Ссылка на следующую страницу'
+                  previous:
+                    type: string
+                    nullable: true
+                    format: uri
+                    example: http://127.0.0.1/api/v1/patients/<int:id>/exercises/?page=2
+                    description: 'Ссылка на предыдущую страницу'
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PatientExercise'
+                    description: 'Список объектов текущей страницы'
+          description: Пациент найден
+        '404':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                    example: Not found.
+          description: Пациент с таким `id` не найден.
+      tags:
+        - PATIENT
+  /api/v1/doctors/:
+    get:
+      operationId: Список Докторов
+      description: Просмотреть список всех докторов.
+      parameters:
+        - name: page
+          required: false
+          in: query
+          description: Номер страницы.
+          schema:
+            type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    example: 123
+                    description: 'Общее количество объектов в базе'
+                  next:
+                    type: string
+                    nullable: true
+                    format: uri
+                    example: http://127.0.0.1/api/v1/doctors/?page=4
+                    description: 'Ссылка на следующую страницу'
+                  previous:
+                    type: string
+                    nullable: true
+                    format: uri
+                    example: http://127.0.0.1/api/v1/doctors/?page=2
+                    description: 'Ссылка на предыдущую страницу'
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Doctor'
+                    description: 'Список объектов текущей страницы'
+          description: Возвращает список докторов
+      tags:
+        - DOCTOR
+    post:
+      operationId: Создать доктора
+      description: Создание доктора с переданными данными.
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DoctorCreate'
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Doctor'
+          description: Доктор создан
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+          description: 'Отсутствует обязательное поле или оно некорректно'
+      tags:
+        - DOCTOR
+  /api/v1/doctors/<int:id>/:
+    get:
+      operationId: Конкретный доктор
+      description: Просмотреть сущность доктора
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Уникальный идентификатор этого доктора.
+          schema:
+            type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Doctor'
+          description: Доктор найден
+        '404':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                    example: Not found.
+          description: Доктор с таким `id` не найден.
+      tags:
+        - DOCTOR
+    delete:
+      operationId: Удаление доктора
+      description: Удалить доктора по его id
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Уникальный идентификатор этого доктора.
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Доктор успешно удален
+        '404':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                    example: Not found.
+          description: Доктор с таким `id` не найден.
+      tags:
+        - DOCTOR
+    patch:
+      operationId: Частичное обновление доктора
+      description: Частично обновить данные доктора
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Уникальный идентификатор этого доктора.
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DoctorCreate'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Doctor'
+          description: Доктор успешно обновлен.
+        '404':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                    example: Not found.
+          description: Доктор с таким `id` не найден.
+      tags:
+        - DOCTOR
+    put:
+      operationId: Полное обновление доктора
+      description: Полностью обновить данные доктора
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Уникальный идентификатор этого доктора.
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DoctorCreate'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Doctor'
+          description: Доктор успешно обновлен.
+        '404':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                    example: Not found.
+          description: Доктор с таким `id` не найден.
+      tags:
+        - DOCTOR
+  /api/v1/doctors/<int:id>/exercises/:
+    get:
+      operationId: Назначенные упражнения
+      description: Просмотреть упражнения, котрый доктор назначил
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Уникальный идентификатор этого доктора.
+          schema:
+            type: integer
+        - name: page
+          required: false
+          in: query
+          description: Номер страницы.
+          schema:
+            type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    example: 123
+                    description: 'Общее количество объектов в базе'
+                  next:
+                    type: string
+                    nullable: true
+                    format: uri
+                    example: http://127.0.0.1/api/v1/doctors/<int:id>/exercises/?page=4
+                    description: 'Ссылка на следующую страницу'
+                  previous:
+                    type: string
+                    nullable: true
+                    format: uri
+                    example: http://127.0.0.1/api/v1/doctors/<int:id>/exercises/?page=2
+                    description: 'Ссылка на предыдущую страницу'
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/DoctorExercise'
+                    description: 'Список объектов текущей страницы'
+          description: Доктор найден
+        '404':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                    example: Not found.
+          description: Доктор с таким `id` не найден.
+      tags:
+        - DOCTOR
+    post:
+      operationId: Назначить упражнение
+      description: Назначить упржнения от имени доктора
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Уникальный идентификатор этого доктора.
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatientExerciseCreate'
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DoctorExercise'
+          description: Упражнение назначенно
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+          description: Отсутствует обязательное поле или оно некорректно
+        '404':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                    example: Not found.
+          description: Доктор с таким `id` не найден.
+      tags:
+        - DOCTOR
+  /api/v1/doctors/<int:doctor_id>/exercises/<int:doctor_exercise_id>/:
+    get:
+      operationId: Конкретное назначенного упражнение
+      description: Детали конкретного назначенного упражнения
+      parameters:
+        - name: doctor_id
+          in: path
+          required: true
+          description: Уникальный идентификатор этого доктора.
+          schema:
+            type: integer
+        - name: doctor_exercise_id
+          required: true
+          in: path
+          description: Уникальный идентификатор назначенного упражнения.
+          schema:
+            type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DoctorExercise'
+              description: Детали упражнения
+          description: Упражнение найдено
+        '404':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                    example: Not found.
+          description: Доктор или назначенное упражнение с таким `id` не найдены.
+      tags:
+        - DOCTOR
+    delete:
+      operationId: Удаление назначенного упражнения
+      description: Удалить назначенное упражнение по его id
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Уникальный идентификатор этого назначенного упражнения.
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Назначенное упражнение успешно удалено
+        '404':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                    example: Not found.
+          description: Назначенное упражнение с таким `id` не найдено.
+      tags:
+        - DOCTOR
+    patch:
+      operationId: Частичное обновление назначенного упражнения
+      description: Частично обновить данные назначенного упражнения
+      parameters:
+        - name: doctor_id
+          in: path
+          required: true
+          description: Уникальный идентификатор этого доктора.
+          schema:
+            type: integer
+        - name: doctor_exercise_id
+          required: true
+          in: path
+          description: Уникальный идентификатор назначенного упражнения.
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatientExerciseCreate'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DoctorExercise'
+          description: Назначенное упражнение успешно обновлено.
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+          description: Отсутствует обязательное поле или оно некорректно
+        '404':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                    example: Not found.
+          description: Доктор или назначенное упражнение с таким `id` не найдены.
+      tags:
+        - DOCTOR
+    put:
+      operationId: Полное обновление назначенного упражнения
+      description: Полностью обновить назначенного упражнения
+      parameters:
+        - name: doctor_id
+          in: path
+          required: true
+          description: Уникальный идентификатор этого доктора.
+          schema:
+            type: integer
+        - name: doctor_exercise_id
+          required: true
+          in: path
+          description: Уникальный идентификатор назначенного упражнения.
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatientExerciseCreate'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DoctorExercise'
+          description: Назначенное упражнение успешно обновлено.
+        '404':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                    example: Not found.
+          description: Доктор или назначенное упражнение с таким `id` не найдены.
+      tags:
+        - DOCTOR
+  /api/v1/exercises/:
+    get:
+      operationId: Список упражнений
+      description: Просмотреть список всех упражнений.
+      parameters:
+        - name: page
+          required: false
+          in: query
+          description: Номер страницы.
+          schema:
+            type: integer
+        - name: doctors__id
+          required: false
+          in: query
+          description: id доктора
+          schema:
+            type: integer
+          example: 1
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    example: 123
+                    description: 'Общее количество объектов в базе'
+                  next:
+                    type: string
+                    nullable: true
+                    format: uri
+                    example: http://127.0.0.1/api/v1/exercises/?page=4
+                    description: 'Ссылка на следующую страницу'
+                  previous:
+                    type: string
+                    nullable: true
+                    format: uri
+                    example: http://127.0.0.1/api/v1/exercises/?page=2
+                    description: 'Ссылка на предыдущую страницу'
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Exercise'
+                    description: 'Список объектов текущей страницы'
+          description: Возвращает список упражнений
+      tags:
+        - EXERCISE
+    post:
+      operationId: Создать упражнение
+      description: Создание упражнения с переданными данными.
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExerciseCreate'
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExerciseFull'
+          description: Упражнение создано
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+          description: 'Отсутствует обязательное поле или оно некорректно'
+      tags:
+        - EXERCISE
+  /api/v1/exercises/<int:id>/:
+    get:
+      operationId: Конкретное упражнение
+      description: Просмотреть сущность упражнения
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Уникальный идентификатор этого упражнения.
+          schema:
+            type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExerciseFull'
+          description: Упражнение найдено
+        '404':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                    example: Not found.
+          description: Упражнение с таким `id` не найдено.
+      tags:
+        - EXERCISE
+    delete:
+      operationId: Удаление упражнения
+      description: Удалить упражнение по его id
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Уникальный идентификатор этого упражнения.
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Упражнение успешно удалено
+        '404':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                    example: Not found.
+          description: Упражнение с таким `id` не найдено.
+      tags:
+        - EXERCISE
+    patch:
+      operationId: Частичное обновление упражнения
+      description: Частично обновить данные упражнения
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Уникальный идентификатор этого упражнения.
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExerciseCreate'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExerciseFull'
+          description: Упражнение успешно обновлено.
+        '404':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                    example: Not found.
+          description: Упражнение с таким `id` не найдено.
+      tags:
+        - EXERCISE
+    put:
+      operationId: Полное обновление упражнение
+      description: Полностью обновить данные упражнения
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Уникальный идентификатор этого доктора.
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExerciseCreate'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExerciseFull'
+          description: Доктор успешно обновлен.
+        '404':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                    example: Not found.
+          description: Упражнение с таким `id` не найдено.
+      tags:
+        - EXERCISE
+
+components:
+  schemas:
+    ValidationError:
+      title: Ошибка валидации
+      type: object
+      properties:
+        field_name:
+          type: array
+          items:
+            type: string
+    Error:
+      title:
+        Ошибка создания
+      type: object
+      properties:
+        error:
+          type: array
+          items:
+            type: string
+    Patient:
+      description: Сущность пациента.
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        first_name:
+          type: string
+          maxLength: 64
+          example: Данил
+        last_name:
+          type: string
+          maxLength: 64
+          example: Уралов
+    PatientCreate:
+      description: Создать сущность пациента.
+      type: object
+      properties:
+        first_name:
+          type: string
+          maxLength: 64
+          example: Данил
+        last_name:
+          type: string
+          maxLength: 64
+          example: Уралов
+    PatientExercise:
+      description: Упражнения пациента
+      type: object
+      properties:
+        id:
+          type: integer
+          example: Данил
+          readOnly: true
+        doctor:
+          $ref: '#/components/schemas/Doctor'
+        exercise:
+          $ref: '#/components/schemas/Exercise'
+        date_assigned:
+          type: string
+          example: 2023-08-02
+    PatientExerciseCreate:
+      description: Назначить упражнение
+      type: object
+      properties:
+        patient:
+          description: id пациента
+          type: integer
+          example: 1
+        exercise:
+          description: id упражнения
+          type: integer
+          example: 1
+
+    Doctor:
+      description: Сущность доктора.
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        first_name:
+          type: string
+          maxLength: 64
+          example: Данил
+        last_name:
+          type: string
+          maxLength: 64
+          example: Уралов
+    DoctorCreate:
+      description: Создать сущность пациента.
+      type: object
+      properties:
+        first_name:
+          type: string
+          maxLength: 64
+          example: Данил
+        last_name:
+          type: string
+          maxLength: 64
+          example: Уралов
+    DoctorExercise:
+      description: Упражнения выставленные доктором
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+          readOnly: true
+        patient:
+          $ref: '#/components/schemas/Patient'
+        exercise:
+          $ref: '#/components/schemas/Exercise'
+        date_assigned:
+          type: string
+          example: 2023-08-02
+    Exercise:
+      description: Сущность упражнения.
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: Подтягивание
+        period:
+          type: string
+          example: 1 00:00:00
+    ExerciseFull:
+      description: Сущность упражнения.
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: Подтягивание
+        period:
+          type: string
+          example: 1 00:00:00
+        doctors:
+          type: array
+          items:
+            $ref: '#/components/schemas/Doctor'
+    ExerciseCreate:
+      description: Создать сущность упражнения.
+      type: object
+      properties:
+        name:
+          type: string
+          example: Подтягивание
+        period:
+          type: string
+          example: 1 00:00:00
+        doctors:
+          description: Список id докторов, которые могут назначать это упражнение
+          type: array
+          items:
+            type: integer
